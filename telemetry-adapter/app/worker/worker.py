@@ -1,5 +1,9 @@
 import asyncio
 from functools import cache
+import logging
+
+
+logger = logging.getLogger(__file__)
 
 
 class Worker:
@@ -9,7 +13,7 @@ class Worker:
     async def run(self):
         self.status = True
         while self.status:
-            print(f"Worker is on the run. Status: {self.status}")
+            logger.debug(f"Worker is on the run. Status: {self.status}")
             await asyncio.sleep(2)
 
 
