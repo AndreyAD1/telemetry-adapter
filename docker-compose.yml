@@ -31,3 +31,7 @@ services:
   telemetry-adapter:
     container_name: telemetry-adapter
     build: telemetry-adapter
+    environment:
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./telemetry-adapter:/telemetry-adapter

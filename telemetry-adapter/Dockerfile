@@ -1,9 +1,13 @@
-FROM python:3.12.2-bookworm
+FROM python:3.12.2-slim
 LABEL authors="Andrey Arakelyants"
+
+RUN apt update
+RUN apt install -y pipx
+RUN pipx ensurepath
+RUN pipx install poetry==1.8.0
 
 WORKDIR /telemetry-adapter
 COPY . .
-RUN curl -sSL https://install.python-poetry.org | python3 -
-RUN ~/.local/share/pypoetry/venv/bin/poetry install --no-root
+RUN ~/.local/bin/poetry install --no-root
 
 ENTRYPOINT ["python", "main.py"]
