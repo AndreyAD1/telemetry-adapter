@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from app.infrastructure.clients.exceptions import QueueClientException
 from app.infrastructure.clients.interfaces import QueueClient
 
 logger = logging.getLogger(__file__)
@@ -15,8 +16,12 @@ class Worker:
         self.status = True
         while self.status:
             logger.debug(f"Worker is on the run. Status: {self.status}")
-            messages = self.queue_client.get_messages()
-            logger.debug(f"Received messages: {messages}")
+            try:
+                messages = self.queue_client.get_messages()
+                logger.debug(f"Received messages: {messages}")
+            except QueueClientException:
+                logger.debug("can not receive messages")
+
             await asyncio.sleep(2)
 
 

@@ -1,0 +1,2 @@
+class QueueClientException(Exception):
+    pass
