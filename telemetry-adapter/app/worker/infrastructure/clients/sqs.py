@@ -4,8 +4,8 @@ from typing import Mapping, Any
 import boto3
 import botocore.exceptions
 
-from app.infrastructure.clients.interfaces import QueueClient
-from app.infrastructure.clients.exceptions import (
+from app.worker.infrastructure.clients.interfaces import QueueClient
+from app.worker.infrastructure.clients.exceptions import (
     QueueClientUnexpectedException,
     QueueClientReceivingException
 )

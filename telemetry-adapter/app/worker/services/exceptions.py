@@ -1,0 +1,2 @@
+class SubmissionReceivingError(Exception):
+    pass

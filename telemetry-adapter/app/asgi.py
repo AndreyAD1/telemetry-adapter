@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.endpoints import router
-from app.infrastructure.clients.sqs import SQSClient
+from app.worker.infrastructure.clients.sqs import SQSClient
+from app.worker.services.submission import SubmissionService
 from app.worker.worker import Worker, register_worker
 from app.logger import configure_logger
 from app.settings import get_settings
@@ -16,8 +17,8 @@ async def lifespan(application: FastAPI):
     configure_logger(settings.debug)
     # TODO a context manager
     sqs_client = SQSClient(settings.queue_url, settings.endpoint_url)
-
-    worker = Worker(sqs_client)
+    submission_service = SubmissionService(sqs_client)
+    worker = Worker(submission_service)
     register_worker(worker)
     try:
         async with asyncio.TaskGroup() as tg:
