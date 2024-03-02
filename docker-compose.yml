@@ -33,5 +33,9 @@ services:
     build: telemetry-adapter
     environment:
       PYTHONUNBUFFERED: 1
+    ports:
+      - "7777:7777"
     volumes:
       - ./telemetry-adapter:/telemetry-adapter
+    command: ["./run.sh"]
+
