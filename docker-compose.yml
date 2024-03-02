@@ -33,6 +33,7 @@ services:
     build: telemetry-adapter
     environment:
       PYTHONUNBUFFERED: 1
+      DEBUG: true
     ports:
       - "7777:7777"
     volumes:

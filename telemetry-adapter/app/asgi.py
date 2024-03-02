@@ -1,24 +1,17 @@
 import asyncio
 from contextlib import asynccontextmanager
-import logging
-import sys
 
 from fastapi import FastAPI
 
 from app.api.endpoints import router
 from app.worker.worker import get_worker
-
-
-# logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-# stream_handler = logging.StreamHandler(sys.stdout)
-# log_formatter = logging.Formatter("%(asctime)s [%(processName)s: %(process)d] [%(threadName)s: %(thread)d] [%(levelname)s] %(name)s: %(message)s")
-# stream_handler.setFormatter(log_formatter)
-# logger.addHandler(stream_handler)
+from app.logger import configure_logger
+from app.settings import get_settings
 
 
 @asynccontextmanager
-async def run_worker(application: FastAPI):
+async def lifespan(application: FastAPI):
+    configure_logger(get_settings().debug)
     # TODO a context manager
     worker = get_worker()
     try:
@@ -31,5 +24,5 @@ async def run_worker(application: FastAPI):
         worker.status = False
 
 
-app = FastAPI(title="Telemetry Adapter", version="1.0.0", lifespan=run_worker)
+app = FastAPI(title="Telemetry Adapter", version="1.0.0", lifespan=lifespan)
 app.include_router(router, prefix="/v1")
