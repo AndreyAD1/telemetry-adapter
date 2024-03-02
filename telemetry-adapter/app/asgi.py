@@ -16,6 +16,7 @@ async def run_worker(application: FastAPI):
             tg.create_task(worker.run())
             worker.status = True
             yield
+            worker.status = False
     finally:
         worker.status = False
 

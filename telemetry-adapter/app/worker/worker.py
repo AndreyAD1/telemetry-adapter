@@ -8,7 +8,7 @@ class Worker:
 
     async def run(self):
         self.status = True
-        while True:
+        while self.status:
             print(f"Worker is on the run. Status: {self.status}")
             await asyncio.sleep(2)
 
