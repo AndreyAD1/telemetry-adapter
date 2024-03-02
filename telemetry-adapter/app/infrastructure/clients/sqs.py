@@ -1,11 +1,14 @@
 import logging
+from typing import Mapping, Any
 
 import boto3
 import botocore.exceptions
 
 from app.infrastructure.clients.interfaces import QueueClient
-from app.infrastructure.clients.exceptions import QueueClientException
-
+from app.infrastructure.clients.exceptions import (
+    QueueClientUnexpectedException,
+    QueueClientReceivingException
+)
 
 logger = logging.getLogger(__file__)
 
@@ -15,16 +18,22 @@ class SQSClient(QueueClient):
         self.sqs_client = boto3.client("sqs", endpoint_url=endpoint_url)
         self.queue_url = queue_url
 
-    def get_messages(self):
+    def get_messages(self) -> Mapping[str, Any]:
         logger.debug(f"get messages from {self.queue_url}")
         try:
-            messages = self.sqs_client.receive_message(
+            response = self.sqs_client.receive_message(
                 QueueUrl=self.queue_url,
                 AttributeNames=['All']
             )
         except botocore.exceptions.ClientError as ex:
             logger.warning(f"Error while retrieving messages: {self.queue_url}: {ex}")
-            raise QueueClientException from ex
+            raise QueueClientReceivingException from ex
+
+        messages = response.get("Messages")
+        if messages is None:
+            err_msg = f"No 'Messages' in SQS response from the queue {self.queue_url}: {response}"
+            logger.error(err_msg)
+            raise QueueClientUnexpectedException(err_msg)
 
         return messages
 
