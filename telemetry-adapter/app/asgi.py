@@ -4,16 +4,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.endpoints import router
-from app.worker.worker import Worker
+from app.worker.worker import get_worker
 
 
 @asynccontextmanager
-async def run_worker(app: FastAPI):
+async def run_worker(application: FastAPI):
     # TODO a context manager
-    worker = Worker()
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(worker.run())
-        yield
+    worker = get_worker()
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(worker.run())
+            worker.status = True
+            yield
+    finally:
+        worker.status = False
 
 
 app = FastAPI(title="Telemetry Adapter", version="1.0.0", lifespan=run_worker)

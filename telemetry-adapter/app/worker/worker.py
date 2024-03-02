@@ -1,13 +1,18 @@
 import asyncio
-import logging
-
-
-logger = logging.getLogger(__name__)
+from functools import cache
 
 
 class Worker:
+    def __init__(self):
+        self.status = False
+
     async def run(self):
+        self.status = True
         while True:
-            logger.info("Worker is on the run log")
-            print("Worker is on the run")
+            print(f"Worker is on the run. Status: {self.status}")
             await asyncio.sleep(2)
+
+
+@cache
+def get_worker():
+    return Worker()
