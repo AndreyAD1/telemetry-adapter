@@ -1,5 +1,5 @@
 import logging
-from typing import Mapping, Any
+from typing import Mapping, Any, Iterable
 
 import boto3
 import botocore.exceptions
@@ -18,7 +18,7 @@ class SQSClient(QueueClient):
         self.sqs_client = boto3.client("sqs", endpoint_url=endpoint_url)
         self.queue_url = queue_url
 
-    def get_messages(self) -> Mapping[str, Any]:
+    def get_messages(self) -> Iterable[Mapping[str, Any]]:
         logger.debug(f"get messages from {self.queue_url}")
         try:
             response = self.sqs_client.receive_message(
@@ -32,5 +32,11 @@ class SQSClient(QueueClient):
         messages = response.get("Messages", [])
         return messages
 
-    def delete_message(self, id_):
-        logger.debug("delete messages")
+    def delete_message(self, receipt_handle: str):
+        logger.debug(f"delete the message {receipt_handle}")
+        try:
+            self.sqs_client.delete_message(self.queue_url, receipt_handle)
+        except botocore.exceptions.ClientError as ex:
+            err = f"Error while deleting the message {receipt_handle}: {self.queue_url}: {ex}"
+            logger.warning(err)
+            raise QueueClientReceivingException from ex

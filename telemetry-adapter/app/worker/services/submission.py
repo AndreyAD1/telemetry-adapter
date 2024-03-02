@@ -9,8 +9,13 @@ logger = logging.getLogger(__file__)
 
 
 class SubmissionService:
-    def __init__(self, queue_client: QueueClient):
+    def __init__(
+            self,
+            queue_client: QueueClient,
+            submission_storage: SubmissionRepository
+    ):
         self.queue_client = queue_client
+        self.submission_storage = submission_storage
 
     def get_submissions(self):
         try:
@@ -27,6 +32,14 @@ class SubmissionService:
 
     async def process_invalid_submission(self, submission):
         logger.debug(f"process invalid submission: {submission}")
+        self.queue_client.delete_message(submission["ReceiptHandle"])
 
     async def process_valid_submission(self, submission):
         logger.debug(f"process valid submission: {submission}")
+        try:
+            success = self.submission_storage.process_submission(submission)
+        except SubmissionStorageException as ex:
+            raise from ex
+
+        if success:
+            self.queue_client.delete_message(submission["ReceiptHandle"])
