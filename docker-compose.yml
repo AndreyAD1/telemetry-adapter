@@ -34,6 +34,7 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
       DEBUG: true
+      QUEUE_URL: "some queue"
     ports:
       - "7777:7777"
     volumes:
