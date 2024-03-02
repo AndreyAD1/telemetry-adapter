@@ -31,10 +31,15 @@ services:
   telemetry-adapter:
     container_name: telemetry-adapter
     build: telemetry-adapter
+    depends_on:
+      - localstack
     environment:
-      PYTHONUNBUFFERED: 1
-      DEBUG: true
-      QUEUE_URL: "some queue"
+      - PYTHONUNBUFFERED=1
+      - DEBUG=true
+      - QUEUE_URL=http://localstack:4566/000000000000/submissions
+      - AWS_ACCESS_KEY_ID=some_key_id
+      - AWS_SECRET_ACCESS_KEY=some_secret
+      - AWS_DEFAULT_REGION=eu-west-1
     ports:
       - "7777:7777"
     volumes:
