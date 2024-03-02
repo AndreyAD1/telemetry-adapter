@@ -36,6 +36,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DEBUG=true
+      - ENDPOINT_URL=http://localstack:4566
       - QUEUE_URL=http://localstack:4566/000000000000/submissions
       - AWS_ACCESS_KEY_ID=some_key_id
       - AWS_SECRET_ACCESS_KEY=some_secret

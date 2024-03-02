@@ -15,7 +15,8 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logger(settings.debug)
     # TODO a context manager
-    sqs_client = SQSClient(settings.queue_url)
+    sqs_client = SQSClient(settings.queue_url, settings.endpoint_url)
+
     worker = Worker(sqs_client)
     register_worker(worker)
     try:

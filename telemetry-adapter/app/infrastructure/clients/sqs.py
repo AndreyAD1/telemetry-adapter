@@ -9,8 +9,8 @@ logger = logging.getLogger(__file__)
 
 
 class SQSClient(QueueClient):
-    def __init__(self, queue_url):
-        self.sqs_client = boto3.client("sqs", endpoint_url="http://localstack:4566")
+    def __init__(self, queue_url, endpoint_url):
+        self.sqs_client = boto3.client("sqs", endpoint_url=endpoint_url)
         self.queue_url = queue_url
 
     def get_messages(self):
