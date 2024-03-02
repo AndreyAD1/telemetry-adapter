@@ -29,12 +29,7 @@ class SQSClient(QueueClient):
             logger.warning(f"Error while retrieving messages: {self.queue_url}: {ex}")
             raise QueueClientReceivingException from ex
 
-        messages = response.get("Messages")
-        if messages is None:
-            err_msg = f"No 'Messages' in SQS response from the queue {self.queue_url}: {response}"
-            logger.error(err_msg)
-            raise QueueClientUnexpectedException(err_msg)
-
+        messages = response.get("Messages", [])
         return messages
 
     def delete_message(self, id_):

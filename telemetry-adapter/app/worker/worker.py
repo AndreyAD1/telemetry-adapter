@@ -1,7 +1,6 @@
 import asyncio
 import logging
 
-from app.worker.infrastructure.clients.exceptions import QueueClientException
 from app.worker.services.exceptions import SubmissionReceivingError
 from app.worker.services.submission import SubmissionService
 
@@ -11,6 +10,7 @@ logger = logging.getLogger(__file__)
 class Worker:
     def __init__(self, submission_service: SubmissionService):
         self.status = False
+        self.error_timeout = 2
         self.submission_service = submission_service
 
     async def run(self):
@@ -23,10 +23,15 @@ class Worker:
                 logger.debug(f'Received invalid submissions: {invalid}')
             except SubmissionReceivingError:
                 logger.debug("can not receive submissions")
+                await asyncio.sleep(self.error_timeout)
+                continue
 
-
-
-            await asyncio.sleep(2)
+            awaitables = [
+                *[self.submission_service.process_invalid_submission(s) for s in invalid],
+                *[self.submission_service.process_valid_submission(s) for s in valid]
+            ]
+            await asyncio.gather(*awaitables, return_exceptions=True)
+            await asyncio.sleep(self.error_timeout)
 
 
 worker = None

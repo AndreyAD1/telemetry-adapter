@@ -1,6 +1,11 @@
+import logging
+
 from app.worker.infrastructure.clients.exceptions import QueueClientException
 from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.services.exceptions import SubmissionReceivingError
+
+
+logger = logging.getLogger(__file__)
 
 
 class SubmissionService:
@@ -19,3 +24,9 @@ class SubmissionService:
     @staticmethod
     def verify_submissions(submissions):
         return submissions, []
+
+    async def process_invalid_submission(self, submission):
+        logger.debug(f"process invalid submission: {submission}")
+
+    async def process_valid_submission(self, submission):
+        logger.debug(f"process valid submission: {submission}")
