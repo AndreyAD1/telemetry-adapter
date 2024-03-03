@@ -4,7 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.endpoints import router
+from app.worker.infrastructure.clients.kinesis import KinesisClient
+from app.worker.infrastructure.clients.postgres import PostgresClient
 from app.worker.infrastructure.clients.sqs import SQSClient
+
+from app.worker.infrastructure.event_streamer import KinesisStreamer
 from app.worker.services.submission import SubmissionService
 from app.worker.worker import Worker, register_worker
 from app.logger import configure_logger
@@ -17,7 +21,10 @@ async def lifespan(application: FastAPI):
     configure_logger(settings.debug)
     # TODO a context manager
     sqs_client = SQSClient(settings.queue_url, settings.endpoint_url)
-    submission_service = SubmissionService(sqs_client)
+    pg_client = PostgresClient(settings.db_url)
+    kinesis_client = KinesisClient(settings.kinesis_url)
+    kinesis_streamer = KinesisStreamer(kinesis_client, pg_client)
+    submission_service = SubmissionService(sqs_client, kinesis_streamer)
     worker = Worker(submission_service)
     register_worker(worker)
     try:

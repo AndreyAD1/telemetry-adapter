@@ -41,6 +41,8 @@ services:
       - AWS_ACCESS_KEY_ID=some_key_id
       - AWS_SECRET_ACCESS_KEY=some_secret
       - AWS_DEFAULT_REGION=eu-west-1
+      - DB_URL=dummy_db
+      - KINESIS_URL=dummy_kinesis
     ports:
       - "7777:7777"
     volumes:

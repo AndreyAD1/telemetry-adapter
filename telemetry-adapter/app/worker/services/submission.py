@@ -2,6 +2,10 @@ import logging
 
 from app.worker.infrastructure.clients.exceptions import QueueClientException
 from app.worker.infrastructure.clients.interfaces import QueueClient
+from app.worker.infrastructure.event_streamer import (
+    EventStreamer,
+    EventStreamerException
+)
 from app.worker.services.exceptions import SubmissionReceivingError
 
 
@@ -12,10 +16,10 @@ class SubmissionService:
     def __init__(
             self,
             queue_client: QueueClient,
-            submission_storage: SubmissionRepository
+            event_streamer: EventStreamer
     ):
         self.queue_client = queue_client
-        self.submission_storage = submission_storage
+        self.event_streamer = event_streamer
 
     def get_submissions(self):
         try:
@@ -37,9 +41,9 @@ class SubmissionService:
     async def process_valid_submission(self, submission):
         logger.debug(f"process valid submission: {submission}")
         try:
-            success = self.submission_storage.process_submission(submission)
-        except SubmissionStorageException as ex:
-            raise from ex
+            success = self.event_streamer.downstream_submission(submission)
+        except EventStreamerException as ex:
+            raise ex
 
         if success:
             self.queue_client.delete_message(submission["ReceiptHandle"])
