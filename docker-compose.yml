@@ -42,7 +42,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=some_secret
       - AWS_DEFAULT_REGION=eu-west-1
       - DB_URL=dummy_db
-      - KINESIS_URL=dummy_kinesis
+      - MAX_MESSAGE_NUMBER_BY_REQUEST=5
+      - SQS_VISIBILITY_TIMEOUT=10
+      - MESSAGE_WAIT_TIME=5
     ports:
       - "7777:7777"
     volumes:

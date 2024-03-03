@@ -17,16 +17,29 @@ logger = logging.getLogger(__file__)
 
 
 class SQSClient(QueueClient):
-    def __init__(self, queue_url, endpoint_url):
+    def __init__(
+            self,
+            queue_url,
+            endpoint_url,
+            max_message_number,
+            visibility_timeout,
+            wait_time
+    ):
         self.sqs_client = boto3.client("sqs", endpoint_url=endpoint_url)
         self.queue_url = queue_url
+        self.max_message_number = max_message_number
+        self.visibility_timeout = visibility_timeout
+        self.wait_time = wait_time
 
     def get_messages(self) -> Iterable[Mapping[str, Any]]:
         logger.debug(f"get messages from {self.queue_url}")
         try:
             response = self.sqs_client.receive_message(
                 QueueUrl=self.queue_url,
-                AttributeNames=['All']
+                AttributeNames=['All'],
+                MaxNumberOfMessages=self.max_message_number,
+                VisibilityTimeout=self.visibility_timeout,
+                WaitTimeSeconds=self.wait_time
             )
         except botocore.exceptions.ClientError as ex:
             logger.warning(f"Error while retrieving messages: {self.queue_url}: {ex}")

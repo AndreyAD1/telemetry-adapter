@@ -20,7 +20,13 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logger(settings.debug)
     # TODO a context manager
-    sqs_client = SQSClient(settings.queue_url, settings.endpoint_url)
+    sqs_client = SQSClient(
+        settings.queue_url,
+        settings.endpoint_url,
+        settings.max_message_number_by_request,
+        settings.sqs_visibility_timeout,
+        settings.message_wait_time
+    )
     pg_client = PostgresClient(settings.db_url)
     kinesis_client = KinesisClient(settings.endpoint_url)
     kinesis_streamer = KinesisStreamer(kinesis_client, pg_client)
