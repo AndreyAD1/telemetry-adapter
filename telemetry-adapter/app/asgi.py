@@ -22,7 +22,7 @@ async def lifespan(application: FastAPI):
     # TODO a context manager
     sqs_client = SQSClient(settings.queue_url, settings.endpoint_url)
     pg_client = PostgresClient(settings.db_url)
-    kinesis_client = KinesisClient(settings.kinesis_url)
+    kinesis_client = KinesisClient(settings.endpoint_url)
     kinesis_streamer = KinesisStreamer(kinesis_client, pg_client)
     submission_service = TelemetryService(sqs_client, kinesis_streamer)
     worker = Worker(submission_service)

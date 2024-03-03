@@ -30,6 +30,7 @@ class KinesisEvent(BaseModel):
 
 class KinesisStreamer(EventStreamer):
     def __init__(self, kinesis_client: KinesisClient, pg_client: PostgresClient):
+        self.stream_name = "events"
         self.kinesis_client = kinesis_client
         self.pg_client = pg_client
 
@@ -49,15 +50,19 @@ class KinesisStreamer(EventStreamer):
             )
             events.append(event)
 
-        sequence_number = 0
+        sequence_number = None
         for event in events:
+            json_event = event.model_dump_json()
             try:
                 sequence_number = self.kinesis_client.put_record(
-                    event.model_dump_json(),
-                    event.device_id,
+                    self.stream_name,
+                    json_event.encode(),
+                    str(event.device_id),
                     sequence_number
                 )
             except KinesisClientException:
                 return False
+
+            logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
 
         return True
