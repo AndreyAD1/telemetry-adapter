@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 import traceback
@@ -55,6 +56,16 @@ class SQSClient(QueueClient):
 
     def get_submission_from_message(self, message: Mapping[str, Any]) -> Mapping[str, Any]:
         body = message["Body"]
+        received_body_hash = message["MD5OfBody"]
+        calculated_body_hash = hashlib.md5(str.encode(body)).hexdigest()
+        if received_body_hash != calculated_body_hash:
+            log_msg = (
+                f"The invalid body hash: {received_body_hash}. "
+                f"Expect: {calculated_body_hash}. Message: {message}"
+            )
+            logger.warning(log_msg)
+            return {}
+
         decoded_body = base64.standard_b64decode(body)
         submission = json.loads(decoded_body)
         logger.debug(f"the decoded message body: {decoded_body}")
