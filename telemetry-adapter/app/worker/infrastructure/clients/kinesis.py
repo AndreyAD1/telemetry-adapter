@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 
 from app.worker.infrastructure.clients.exceptions import KinesisClientException
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class KinesisClient:

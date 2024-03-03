@@ -13,7 +13,7 @@ from app.worker.infrastructure.types import EventStreamerException, Submission
 from app.worker.services.exceptions import SubmissionReceivingError
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class Message(BaseModel):
@@ -62,7 +62,8 @@ class TelemetryService:
             except pydantic.ValidationError as ex:
                 logger.warning(
                     f"can not retrieve a submission from the message: {ex}. "
-                    f"Message: {message}"
+                    f"Message: {message}. "
+                    f"Submission: {raw_submission}"
                 )
                 invalid_messages.append(parsed_message)
                 continue

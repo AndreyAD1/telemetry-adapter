@@ -5,7 +5,7 @@ import traceback
 from app.worker.services.exceptions import SubmissionReceivingError
 from app.worker.services.submission import TelemetryService
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class Worker:

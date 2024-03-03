@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import logging.config
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,14 +13,19 @@ from app.worker.infrastructure.clients.sqs import SQSClient
 from app.worker.infrastructure.event_streamer import KinesisStreamer
 from app.worker.services.submission import TelemetryService
 from app.worker.worker import Worker, register_worker
-from app.logger import configure_logger
 from app.settings import get_settings
+
+
+logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     settings = get_settings()
-    configure_logger(settings.debug)
+    if settings.debug:
+        logging.getLogger("app").setLevel(logging.DEBUG)
+
     # TODO a context manager
     sqs_client = SQSClient(
         settings.queue_url,

@@ -13,7 +13,7 @@ from app.worker.infrastructure.clients.exceptions import (
     QueueClientReceivingException, QueueClientUnexpectedMessage
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 class SQSClient(QueueClient):
