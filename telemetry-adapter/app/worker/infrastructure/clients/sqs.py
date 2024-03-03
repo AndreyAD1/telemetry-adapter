@@ -10,7 +10,7 @@ import botocore.exceptions
 
 from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.infrastructure.clients.exceptions import (
-    QueueClientReceivingException
+    QueueClientReceivingException, QueueClientUnexpectedMessage
 )
 
 logger = logging.getLogger(__file__)
@@ -55,16 +55,21 @@ class SQSClient(QueueClient):
         return message["ReceiptHandle"]
 
     def get_submission_from_message(self, message: Mapping[str, Any]) -> Mapping[str, Any]:
-        body = message["Body"]
-        received_body_hash = message["MD5OfBody"]
+        body = message.get("Body")
+        received_body_hash = message.get("MD5OfBody")
+        if body is None or received_body_hash is None:
+            err_msg = f"No body or no body hash is in the message {message}"
+            logger.warning(err_msg)
+            raise QueueClientUnexpectedMessage(msg=err_msg)
+
         calculated_body_hash = hashlib.md5(str.encode(body)).hexdigest()
         if received_body_hash != calculated_body_hash:
-            log_msg = (
+            err_msg = (
                 f"The invalid body hash: {received_body_hash}. "
                 f"Expect: {calculated_body_hash}. Message: {message}"
             )
-            logger.warning(log_msg)
-            return {}
+            logger.warning(err_msg)
+            raise QueueClientUnexpectedMessage(msg=err_msg)
 
         decoded_body = base64.standard_b64decode(body)
         submission = json.loads(decoded_body)

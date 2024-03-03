@@ -9,3 +9,8 @@ class QueueClientUnexpectedException(QueueClientException):
 
 class QueueClientReceivingException(QueueClientException):
     pass
+
+
+class QueueClientUnexpectedMessage(QueueClientException):
+    def __init__(self, msg=""):
+        self.msg = msg

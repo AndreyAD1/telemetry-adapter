@@ -4,7 +4,7 @@ from typing import Tuple, List, Mapping, Any, Iterable
 import pydantic
 from pydantic import BaseModel
 
-from app.worker.infrastructure.clients.exceptions import QueueClientException
+from app.worker.infrastructure.clients.exceptions import QueueClientException, QueueClientUnexpectedMessage
 from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.infrastructure.event_streamer import (
     EventStreamer,
@@ -46,14 +46,24 @@ class TelemetryService:
             try:
                 parsed_message = Message(deletion_id=deletion_id)
             except pydantic.ValidationError as ex:
-                logger.error(f"The unexpected deletion id: {ex}: {message}")
+                logger.error(f"The unexpected deletion id: {ex}. Message: {message}")
                 continue
 
-            raw_submission = self.queue_client.get_submission_from_message(message)
+            try:
+                raw_submission = self.queue_client.get_submission_from_message(
+                    message
+                )
+            except QueueClientUnexpectedMessage:
+                invalid_messages.append(parsed_message)
+                continue
+
             try:
                 submission = Submission(**raw_submission)
             except pydantic.ValidationError as ex:
-                logger.warning(f"can not retrieve a submission from the message: {ex}")
+                logger.warning(
+                    f"can not retrieve a submission from the message: {ex}. "
+                    f"Message: {message}"
+                )
                 invalid_messages.append(parsed_message)
                 continue
 
