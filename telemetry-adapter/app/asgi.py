@@ -9,7 +9,7 @@ from app.worker.infrastructure.clients.postgres import PostgresClient
 from app.worker.infrastructure.clients.sqs import SQSClient
 
 from app.worker.infrastructure.event_streamer import KinesisStreamer
-from app.worker.services.submission import SubmissionService
+from app.worker.services.submission import TelemetryService
 from app.worker.worker import Worker, register_worker
 from app.logger import configure_logger
 from app.settings import get_settings
@@ -24,7 +24,7 @@ async def lifespan(application: FastAPI):
     pg_client = PostgresClient(settings.db_url)
     kinesis_client = KinesisClient(settings.kinesis_url)
     kinesis_streamer = KinesisStreamer(kinesis_client, pg_client)
-    submission_service = SubmissionService(sqs_client, kinesis_streamer)
+    submission_service = TelemetryService(sqs_client, kinesis_streamer)
     worker = Worker(submission_service)
     register_worker(worker)
     try:

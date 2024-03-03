@@ -46,4 +46,10 @@ class SQSClient(QueueClient):
         except Exception as ex:
             logger.warning(f"a deletion error {ex}: {traceback.format_exc()}")
             raise ex
-        logger.debug(f"successful deletion: {receipt_handle}")
+        logger.debug(f"the successful deletion: {receipt_handle}")
+
+    def get_deletion_id(self, message: Mapping[str, Any]) -> str:
+        return message["ReceiptHandle"]
+
+    def get_submission_from_message(self, message: Mapping[str, Any]) -> Mapping[str, Any]:
+        return {"body": message["Body"]}
