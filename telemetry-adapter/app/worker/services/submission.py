@@ -42,9 +42,9 @@ class TelemetryService:
     def parse_messages(self, messages: Iterable[Mapping[str, Any]]) -> Tuple[List[Message], List[Message]]:
         valid_messages, invalid_messages = [], []
         for message in messages:
-            message_id = self.queue_client.get_deletion_id(message)
+            deletion_id = self.queue_client.get_deletion_id(message)
             try:
-                parsed_message = Message(deletion_id=message_id)
+                parsed_message = Message(deletion_id=deletion_id)
             except pydantic.ValidationError as ex:
                 logger.error(f"The unexpected deletion id: {ex}: {message}")
                 continue
@@ -74,4 +74,4 @@ class TelemetryService:
             raise ex
 
         if success:
-            self.queue_client.delete_message(message.id)
+            self.queue_client.delete_message(message.deletion_id)

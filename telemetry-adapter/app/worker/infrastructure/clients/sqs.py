@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import traceback
 from typing import Mapping, Any, Iterable
@@ -52,4 +54,8 @@ class SQSClient(QueueClient):
         return message["ReceiptHandle"]
 
     def get_submission_from_message(self, message: Mapping[str, Any]) -> Mapping[str, Any]:
-        return {"body": message["Body"]}
+        body = message["Body"]
+        decoded_body = base64.standard_b64decode(body)
+        submission = json.loads(decoded_body)
+        logger.debug(f"the decoded message body: {decoded_body}")
+        return submission
