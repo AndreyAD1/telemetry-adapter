@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 import logging
+from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4
 
 from app.worker.infrastructure.clients.kinesis import KinesisClient
 from app.worker.infrastructure.clients.postgres import PostgresClient
@@ -13,8 +15,27 @@ class EventStreamerException(Exception):
     pass
 
 
+class NewProcesses(BaseModel):
+    cmdl: str
+    user: str
+
+
+class NetworkConnections(BaseModel):
+    source_ip: str
+    destination_ip: str
+    destination_port: int
+
+
+class Events(BaseModel):
+    new_process: List[NewProcesses]
+    network_connection: List[NetworkConnections]
+
+
 class Submission(BaseModel):
-    submission_id: str
+    submission_id: UUID4
+    device_id: UUID4
+    time_created: datetime
+    events: Events
 
 
 class EventStreamer(ABC):
