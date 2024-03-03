@@ -8,20 +8,20 @@ class EventStreamerException(Exception):
     pass
 
 
-class NewProcesses(BaseModel):
+class NewProcess(BaseModel):
     cmdl: str
     user: str
 
 
-class NetworkConnections(BaseModel):
+class NetworkConnection(BaseModel):
     source_ip: IPvAnyAddress
     destination_ip: IPvAnyAddress
     destination_port: PositiveInt
 
 
 class Events(BaseModel):
-    new_process: List[NewProcesses]
-    network_connection: List[NetworkConnections]
+    new_process: List[NewProcess]
+    network_connection: List[NetworkConnection]
 
 
 class Submission(BaseModel):

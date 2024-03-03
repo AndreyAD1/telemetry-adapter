@@ -14,3 +14,7 @@ class QueueClientReceivingException(QueueClientException):
 class QueueClientUnexpectedMessage(QueueClientException):
     def __init__(self, msg=""):
         self.msg = msg
+
+
+class KinesisClientException(Exception):
+    pass
