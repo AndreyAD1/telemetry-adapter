@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Mapping, Any, Iterable
 
 import boto3
@@ -6,7 +7,6 @@ import botocore.exceptions
 
 from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.infrastructure.clients.exceptions import (
-    QueueClientUnexpectedException,
     QueueClientReceivingException
 )
 
@@ -35,8 +35,15 @@ class SQSClient(QueueClient):
     def delete_message(self, receipt_handle: str):
         logger.debug(f"delete the message {receipt_handle}")
         try:
-            self.sqs_client.delete_message(self.queue_url, receipt_handle)
+            self.sqs_client.delete_message(
+                QueueUrl=self.queue_url,
+                ReceiptHandle=receipt_handle
+            )
         except botocore.exceptions.ClientError as ex:
             err = f"Error while deleting the message {receipt_handle}: {self.queue_url}: {ex}"
             logger.warning(err)
             raise QueueClientReceivingException from ex
+        except Exception as ex:
+            logger.warning(f"a deletion error {ex}: {traceback.format_exc()}")
+            raise ex
+        logger.debug(f"successful deletion: {receipt_handle}")

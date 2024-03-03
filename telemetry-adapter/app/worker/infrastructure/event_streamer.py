@@ -14,7 +14,7 @@ class EventStreamerException(Exception):
 
 
 class Submission(BaseModel):
-    id_: str
+    submission_id: str
 
 
 class EventStreamer(ABC):
@@ -28,5 +28,6 @@ class KinesisStreamer(EventStreamer):
         self.kinesis_client = kinesis_client
         self.pg_client = pg_client
 
-    def downstream_submission(self, submission: Submission):
+    def downstream_submission(self, submission: Submission) -> bool:
         logger.debug(f"downstream a submission {submission}")
+        return True

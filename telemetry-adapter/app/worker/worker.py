@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 
 from app.worker.services.exceptions import SubmissionReceivingError
 from app.worker.services.submission import SubmissionService
@@ -30,7 +31,13 @@ class Worker:
                 *[self.submission_service.process_invalid_submission(s) for s in invalid],
                 *[self.submission_service.process_valid_submission(s) for s in valid]
             ]
-            await asyncio.gather(*awaitables, return_exceptions=True)
+            results = await asyncio.gather(*awaitables, return_exceptions=True)
+            for result in results:
+                if not isinstance(result, Exception):
+                    continue
+                exc_trace = "".join(traceback.format_tb(result.__traceback__))
+                logger.warning(f"a submission processing error: {exc_trace}: {result}")
+
             await asyncio.sleep(self.error_timeout)
 
 
