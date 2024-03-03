@@ -7,9 +7,9 @@ from pydantic import BaseModel
 from app.worker.infrastructure.clients.exceptions import QueueClientException, QueueClientUnexpectedMessage
 from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.infrastructure.event_streamer import (
-    EventStreamer,
-    EventStreamerException, Submission
+    EventStreamer
 )
+from app.worker.infrastructure.types import EventStreamerException, Submission
 from app.worker.services.exceptions import SubmissionReceivingError
 
 
