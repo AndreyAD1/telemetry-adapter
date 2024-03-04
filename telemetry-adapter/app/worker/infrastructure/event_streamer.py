@@ -105,25 +105,29 @@ class KinesisStreamer(EventStreamer):
             is_success = True
             for event in events:
                 json_event = event.model_dump_json()
-                async with conn.transaction():
-                    await conn.execute(
-                        "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s WHERE id=%s",
-                        (delivered_events_number, sequence_number, submission.submission_id)
-                    )
-                    try:
-                        sequence_number = await self.kinesis_client.put_record(
-                            self.stream_name,
-                            json_event.encode(),
-                            str(event.device_id),
-                            sequence_number
+                try:
+                    async with conn.transaction():
+                        await conn.execute(
+                            "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s WHERE id=%s",
+                            (delivered_events_number, sequence_number, submission.submission_id)
                         )
-                    except KinesisClientException:
-                        await conn.rollback()
-                        is_success = False
-                        break
+                        try:
+                            sequence_number = await self.kinesis_client.put_record(
+                                self.stream_name,
+                                json_event.encode(),
+                                str(event.device_id),
+                                sequence_number
+                            )
+                        except KinesisClientException:
+                            await conn.rollback()
+                            is_success = False
+                            break
 
-                    delivered_events_number += 1
-                    logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
+                        delivered_events_number += 1
+                        logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
+                except psycopg.OperationalError:
+                    logger.warning(f"DB error while sending the event: {event}")
+                    break
 
             await conn.execute(
                 "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s, "
