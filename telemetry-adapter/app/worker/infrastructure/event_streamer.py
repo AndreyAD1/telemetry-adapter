@@ -37,7 +37,7 @@ class StatusEnum(Enum):
 
 
 class StoredSubmission(BaseModel):
-    submission_id: UUID4
+    id: UUID4
     status: StatusEnum
     number_of_delivered_events: PositiveInt
 
