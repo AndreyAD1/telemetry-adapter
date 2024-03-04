@@ -1,9 +1,9 @@
 # Telemetry Adapter
 This is a service that receives telemetry messages from [an SQS queue](https://docs.aws.amazon.com/sqs/), 
-converts messages into events, and send the events to [a Kinesis stream](https://docs.aws.amazon.com/kinesis/).
+converts messages into events, and sends the events to [a Kinesis stream](https://docs.aws.amazon.com/kinesis/).
 
 ## Motivation
-Processing device telemetry submissions, we encounter several risks:
+When processing device telemetry submissions, we encounter several risks:
 1. Invalid and/or malicious submissions;
 2. Low performance and difficulties with delivering data to multiple consumers 
 (a fan-out delivery).
@@ -18,8 +18,9 @@ Using this service with a Kinesis stream helps mitigate these risks.
 3. Convert submissions into a set of events.
 4. Route events to a Kinesis stream.
 5. Clear an SQS queue from delivered and invalid messages. 
-6. Ensure an event order and the absence of duplicate submissions.
-7. Ensure no data loss.
+6. TODO: Ensure an event order.
+7. TODO: Ensure the absence of duplicate events.
+8. Ensure no data loss.
 
 ## Getting Started
 1. Install [Docker](https://docs.docker.com/get-docker/).
@@ -30,7 +31,7 @@ Alternatively, you can set parameters when you start a container.
    ```shell
    docker build . --tag telemetry-adapter
    ```
-5. Run the service container
+5. Run the service container.
    ```shell
    docker run telemetry-adapter
    ```
@@ -48,7 +49,7 @@ Follow these steps to run a testing environment.
    This command will run device emulators (`sensor-fleet`), an SQS queue,
    a Kinesis stream (`localstack`), and this service.
 3. When you update a service code, the application will immediately restart with
-updated code
+the updated code.
 
 ### Tests
-TODO - There are no tests in the project yet.
+TODO: There are no tests in the project yet.

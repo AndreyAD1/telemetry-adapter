@@ -9,7 +9,6 @@ from app.api.endpoints import router
 from app.worker.infrastructure.clients.kinesis import KinesisClient
 from app.worker.infrastructure.clients.postgres import PostgresClient
 from app.worker.infrastructure.clients.sqs import SQSClient
-
 from app.worker.infrastructure.event_streamer import KinesisStreamer
 from app.worker.services.submission import TelemetryService
 from app.worker.worker import Worker, register_worker
