@@ -53,44 +53,19 @@ class KinesisStreamer(EventStreamer):
         process_events = [("new_process", p) for p in submission.events.new_process]
         connection_events = [("network_connection", p) for p in submission.events.network_connection]
         all_events = process_events + connection_events
-        delivered_events_number = 0
-        sequence_number = None
 
         async with self.connection_pool.connection() as conn:
             await conn.set_autocommit(True)
             async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
-                await cur.execute(
-                    "SELECT * FROM submissions WHERE id = %s",
-                    (submission.submission_id,)
+                delivered_events_number, sequence_number, is_success = await self._get_current_submission_status(
+                    cur,
+                    submission.submission_id,
+                    len(all_events)
                 )
-                stored_submission = await cur.fetchone()
-                if stored_submission:
-                    logger.debug(f"query_result {stored_submission}")
-                    if stored_submission.status == StatusEnum.pending.value:
-                        return False
-                    if stored_submission.number_of_delivered_events == len(all_events):
-                        return True
-                    delivered_events_number = stored_submission.number_of_delivered_events
-                    sequence_number = stored_submission.sequence_number
-                    cur.execute(
-                        "UPDATE submissions SET status='pending' WHERE id=%s AND status='processed'",
-                        (submission.submission_id,)
-                    )
-                    if cur.rowcount == 0:
-                        return False
-                else:
-                    # create a new pending submission
-                    try:
-                        await cur.execute(
-                            "INSERT INTO submissions (id, status, number_of_delivered_events) VALUES (%s, %s, %s)",
-                            (submission.submission_id, "pending", 0)
-                        )
-                    except psycopg.errors.UniqueViolation:
-                        logger.debug(f"the other worker is processing the submission {submission.submission_id}")
-                        return False
+                if is_success is not None:
+                    return is_success
 
             logger.debug(f"downstream a submission {submission}")
-
             events = []
             for event_type, event_details in all_events[delivered_events_number:]:
                 event = KinesisEvent(
@@ -139,3 +114,43 @@ class KinesisStreamer(EventStreamer):
             )
 
         return is_success
+
+    @staticmethod
+    async def _get_current_submission_status(cur, submission_id, event_number):
+        delivered_events_number = 0
+        sequence_number = None
+
+        await cur.execute(
+            "SELECT * FROM submissions WHERE id = %s",
+            (submission_id,)
+        )
+        stored_submission = await cur.fetchone()
+        if stored_submission:
+            logger.debug(f"query_result {stored_submission}")
+            if stored_submission.status == StatusEnum.pending.value:
+                return delivered_events_number, sequence_number, False
+            if stored_submission.number_of_delivered_events == len(event_number):
+                return delivered_events_number, sequence_number, True
+            delivered_events_number = stored_submission.number_of_delivered_events
+            sequence_number = stored_submission.sequence_number
+            cur.execute(
+                "UPDATE submissions SET status='pending' "
+                "WHERE id=%s AND status='processed' AND delivered_events_number=%s",
+                (submission_id, delivered_events_number)
+            )
+            # another worker is processing an event
+            if cur.rowcount == 0:
+                return delivered_events_number, sequence_number, False
+        else:
+            # create a new pending submission
+            try:
+                await cur.execute(
+                    "INSERT INTO submissions (id, status, number_of_delivered_events) "
+                    "VALUES (%s, %s, %s)",
+                    (submission_id, "pending", 0)
+                )
+            except psycopg.errors.UniqueViolation:
+                logger.debug(f"the other worker is processing the submission {submission_id}")
+                return delivered_events_number, sequence_number, False
+
+        return delivered_events_number, sequence_number, None
