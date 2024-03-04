@@ -29,6 +29,7 @@ def upgrade() -> None:
             nullable=False
         ),
         sa.Column("number_of_delivered_events", sa.Integer, nullable=False, default=0),
+        sa.Column("sequence_number", sa.Text, nullable=True)
     )
 
 
