@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, UTC
 import logging
+from enum import Enum
 from typing import Union
 from uuid import uuid4
 
-from pydantic import BaseModel, UUID4, AwareDatetime
+from psycopg.rows import class_row
+from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel, UUID4, AwareDatetime, PositiveInt
 
 from app.worker.infrastructure.clients.exceptions import KinesisClientException
 from app.worker.infrastructure.clients.kinesis import KinesisClient
-from app.worker.infrastructure.clients.postgres import PostgresClient
+from app.worker.infrastructure.clients.postgres import PostgresClient, PostgresPoolManager
 from app.worker.infrastructure.types import Submission, NewProcess, NetworkConnection
 
 logger = logging.getLogger(__name__)
@@ -28,17 +31,44 @@ class KinesisEvent(BaseModel):
     event_details: Union[NewProcess, NetworkConnection]
 
 
+class StatusEnum(Enum):
+    pending = "pending"
+    processed = "processed"
+
+
+class StoredSubmission(BaseModel):
+    submission_id: UUID4
+    status: StatusEnum
+    number_of_delivered_events: PositiveInt
+
+
 class KinesisStreamer(EventStreamer):
-    def __init__(self, kinesis_client: KinesisClient, pg_client: PostgresClient):
+    def __init__(self, kinesis_client: KinesisClient, pg_connection_pool: AsyncConnectionPool):
         self.stream_name = "events"
         self.kinesis_client = kinesis_client
-        self.pg_client = pg_client
+        self.connection_pool = pg_connection_pool
 
     async def downstream_submission(self, submission: Submission) -> bool:
+        process_events = [("new_process", p) for p in submission.events.new_process]
+        connection_events = [("network_connection", p) for p in submission.events.network_connection]
+        all_events = process_events + connection_events
+
+        async with self.connection_pool.connection() as conn:
+            async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
+                cur = await cur.execute("SELECT 1")
+                # cur = await cur.execute(
+                #     "SELECT * FROM submission WHERE id = %s",
+                #     (submission.submission_id,)
+                # )
+                stored_submission = await cur.fetchone()
+                if stored_submission:
+                    logger.debug("query_result", stored_submission)
+                else:
+                    # create a new pending submission
+                    pass
+
         logger.debug(f"downstream a submission {submission}")
-        new_processes = [("new_process", p) for p in submission.events.new_process]
-        connections = [("network_connection", p) for p in submission.events.network_connection]
-        all_events = new_processes + connections
+
         events = []
         for event_type, event_details in all_events:
             event = KinesisEvent(

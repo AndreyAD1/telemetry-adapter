@@ -32,7 +32,8 @@ services:
     container_name: telemetry-adapter
     build: telemetry-adapter
     depends_on:
-      - localstack
+      postgres:
+        condition: service_healthy
     environment:
       - PYTHONUNBUFFERED=1
       - DEBUG=true
@@ -41,7 +42,7 @@ services:
       - AWS_ACCESS_KEY_ID=some_key_id
       - AWS_SECRET_ACCESS_KEY=some_secret
       - AWS_DEFAULT_REGION=eu-west-1
-      - DB_URL=dummy_db
+      - DB_URL=postgresql://telemetry:secret@postgres/telemetry?sslmode=disabled
       - MAX_MESSAGE_NUMBER_BY_REQUEST=5
       - SQS_VISIBILITY_TIMEOUT=10
       - MESSAGE_WAIT_TIME=5
@@ -51,3 +52,16 @@ services:
       - ./telemetry-adapter:/telemetry-adapter
     command: ["./run.sh"]
 
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=telemetry
+      - POSTGRES_PASSWORD=secret
+    ports:
+      - "7779:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U telemetry" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
