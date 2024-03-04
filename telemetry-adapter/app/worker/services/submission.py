@@ -6,9 +6,7 @@ from pydantic import BaseModel
 
 from app.worker.infrastructure.clients.exceptions import QueueClientException, QueueClientUnexpectedMessage
 from app.worker.infrastructure.clients.interfaces import QueueClient
-from app.worker.infrastructure.event_streamer import (
-    EventStreamer
-)
+from app.worker.infrastructure.event_streamer import EventStreamer
 from app.worker.infrastructure.types import EventStreamerException, Submission
 from app.worker.services.exceptions import SubmissionReceivingError
 
@@ -75,14 +73,14 @@ class TelemetryService:
 
     async def process_invalid_message(self, message: Message):
         logger.debug(f"process invalid submission: {message}")
-        self.queue_client.delete_message(message.deletion_id)
+        await self.queue_client.delete_message(message.deletion_id)
 
     async def process_valid_message(self, message: Message):
         logger.debug(f"process valid message: {message}")
         try:
-            success = self.event_streamer.downstream_submission(message.submission)
+            success = await self.event_streamer.downstream_submission(message.submission)
         except EventStreamerException as ex:
             raise ex
 
         if success:
-            self.queue_client.delete_message(message.deletion_id)
+            await self.queue_client.delete_message(message.deletion_id)

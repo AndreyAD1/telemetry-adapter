@@ -34,7 +34,7 @@ class KinesisStreamer(EventStreamer):
         self.kinesis_client = kinesis_client
         self.pg_client = pg_client
 
-    def downstream_submission(self, submission: Submission) -> bool:
+    async def downstream_submission(self, submission: Submission) -> bool:
         logger.debug(f"downstream a submission {submission}")
         new_processes = [("new_process", p) for p in submission.events.new_process]
         connections = [("network_connection", p) for p in submission.events.network_connection]
@@ -54,7 +54,7 @@ class KinesisStreamer(EventStreamer):
         for event in events:
             json_event = event.model_dump_json()
             try:
-                sequence_number = self.kinesis_client.put_record(
+                sequence_number = await self.kinesis_client.put_record(
                     self.stream_name,
                     json_event.encode(),
                     str(event.device_id),

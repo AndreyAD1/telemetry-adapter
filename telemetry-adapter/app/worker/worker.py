@@ -17,7 +17,6 @@ class Worker:
     async def run(self):
         self.status = True
         while self.status:
-            logger.debug(f"Worker is on the run. Status: {self.status}")
             try:
                 valid, invalid = self.submission_service.get_messages()
                 logger.debug(f"Received valid submissions: {valid}")
