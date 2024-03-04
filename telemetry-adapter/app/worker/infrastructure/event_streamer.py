@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Union
 from uuid import uuid4
 
+import psycopg.errors
 from psycopg.rows import class_row
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, UUID4, AwareDatetime, PositiveInt
@@ -54,46 +55,53 @@ class KinesisStreamer(EventStreamer):
         all_events = process_events + connection_events
 
         async with self.connection_pool.connection() as conn:
-            # async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
-            async with conn.cursor() as cur:
-                cur = await cur.execute("SELECT 1")
-                # cur = await cur.execute(
-                #     "SELECT * FROM submission WHERE id = %s",
-                #     (submission.submission_id,)
-                # )
+            await conn.set_autocommit(True)
+            async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
+                cur = await cur.execute(
+                    "SELECT * FROM submissions WHERE id = %s",
+                    (submission.submission_id,)
+                )
                 stored_submission = await cur.fetchone()
                 if stored_submission:
                     logger.debug(f"query_result {stored_submission}")
                 else:
                     # create a new pending submission
-                    pass
+                    async with conn.transaction():
+                        try:
+                            await cur.execute(
+                                "INSERT INTO submissions (id, status, number_of_delivered_events) VALUES (%s, %s, %s)",
+                                (submission.submission_id, "pending", 0)
+                            )
+                        except psycopg.errors.UniqueViolation:
+                            logger.debug(f"the other worker is processing the submission {submission.id}")
+                            return False
 
-        logger.debug(f"downstream a submission {submission}")
+            logger.debug(f"downstream a submission {submission}")
 
-        events = []
-        for event_type, event_details in all_events:
-            event = KinesisEvent(
-                id=uuid4(),
-                event_type=event_type,
-                device_id=submission.device_id,
-                processing_timestamp=datetime.now(UTC),
-                event_details=event_details
-            )
-            events.append(event)
-
-        sequence_number = None
-        for event in events:
-            json_event = event.model_dump_json()
-            try:
-                sequence_number = await self.kinesis_client.put_record(
-                    self.stream_name,
-                    json_event.encode(),
-                    str(event.device_id),
-                    sequence_number
+            events = []
+            for event_type, event_details in all_events:
+                event = KinesisEvent(
+                    id=uuid4(),
+                    event_type=event_type,
+                    device_id=submission.device_id,
+                    processing_timestamp=datetime.now(UTC),
+                    event_details=event_details
                 )
-            except KinesisClientException:
-                return False
+                events.append(event)
 
-            logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
+            sequence_number = None
+            for event in events:
+                json_event = event.model_dump_json()
+                try:
+                    sequence_number = await self.kinesis_client.put_record(
+                        self.stream_name,
+                        json_event.encode(),
+                        str(event.device_id),
+                        sequence_number
+                    )
+                except KinesisClientException:
+                    return False
+
+                logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
 
         return True
