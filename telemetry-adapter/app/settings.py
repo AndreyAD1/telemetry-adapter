@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     sqs_visibility_timeout: PositiveInt
     message_wait_time: NonNegativeInt
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
 
 @cache
