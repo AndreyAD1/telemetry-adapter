@@ -3,6 +3,8 @@ import logging
 import logging.config
 from contextlib import asynccontextmanager
 
+import psycopg
+import psycopg_pool
 from fastapi import FastAPI
 from psycopg_pool import AsyncConnectionPool
 
@@ -34,7 +36,19 @@ async def lifespan(application: FastAPI):
         settings.sqs_visibility_timeout,
         settings.message_wait_time
     )
-    async with AsyncConnectionPool(conninfo=settings.db_url) as pg_pool:
+    async with AsyncConnectionPool(
+            conninfo=settings.db_url,
+            check=AsyncConnectionPool.check_connection,
+            timeout=15
+    ) as pg_pool:
+        try:
+            async with pg_pool.connection() as conn:
+                logger.debug("check the DB connection")
+                await conn.execute("SELECT 1")
+        except psycopg.OperationalError:
+            logger.error(f"No database connection: {settings.db_url}")
+            raise
+
         kinesis_client = KinesisClient(settings.endpoint_url)
         kinesis_streamer = KinesisStreamer(kinesis_client, pg_pool)
         submission_service = TelemetryService(sqs_client, kinesis_streamer)

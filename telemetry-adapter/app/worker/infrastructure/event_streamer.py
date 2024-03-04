@@ -54,7 +54,8 @@ class KinesisStreamer(EventStreamer):
         all_events = process_events + connection_events
 
         async with self.connection_pool.connection() as conn:
-            async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
+            # async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
+            async with conn.cursor() as cur:
                 cur = await cur.execute("SELECT 1")
                 # cur = await cur.execute(
                 #     "SELECT * FROM submission WHERE id = %s",
@@ -62,7 +63,7 @@ class KinesisStreamer(EventStreamer):
                 # )
                 stored_submission = await cur.fetchone()
                 if stored_submission:
-                    logger.debug("query_result", stored_submission)
+                    logger.debug(f"query_result {stored_submission}")
                 else:
                     # create a new pending submission
                     pass
