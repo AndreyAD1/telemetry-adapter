@@ -57,24 +57,33 @@ class KinesisStreamer(EventStreamer):
         async with self.connection_pool.connection() as conn:
             await conn.set_autocommit(True)
             async with conn.cursor(row_factory=class_row(StoredSubmission)) as cur:
-                cur = await cur.execute(
+                await cur.execute(
                     "SELECT * FROM submissions WHERE id = %s",
                     (submission.submission_id,)
                 )
                 stored_submission = await cur.fetchone()
                 if stored_submission:
                     logger.debug(f"query_result {stored_submission}")
+                    if stored_submission.status == StatusEnum.pending.value:
+                        return False
+                    if stored_submission.number_of_delivered_events == len(all_events):
+                        return True
+                    cur.execute(
+                        "UPDATE submissions SET status='pending' WHERE id=%s AND status='processed'",
+                        (submission.submission_id,)
+                    )
+                    if cur.rowcount() == 0:
+                        return False
                 else:
                     # create a new pending submission
-                    async with conn.transaction():
-                        try:
-                            await cur.execute(
-                                "INSERT INTO submissions (id, status, number_of_delivered_events) VALUES (%s, %s, %s)",
-                                (submission.submission_id, "pending", 0)
-                            )
-                        except psycopg.errors.UniqueViolation:
-                            logger.debug(f"the other worker is processing the submission {submission.id}")
-                            return False
+                    try:
+                        await cur.execute(
+                            "INSERT INTO submissions (id, status, number_of_delivered_events) VALUES (%s, %s, %s)",
+                            (submission.submission_id, "pending", 0)
+                        )
+                    except psycopg.errors.UniqueViolation:
+                        logger.debug(f"the other worker is processing the submission {submission.submission_id}")
+                        return False
 
             logger.debug(f"downstream a submission {submission}")
 
