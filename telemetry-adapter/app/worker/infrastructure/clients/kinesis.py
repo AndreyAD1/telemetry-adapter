@@ -1,11 +1,10 @@
 import logging
 from typing import Union
 
-from aiobotocore.session import get_session
-import boto3
 from botocore.exceptions import ClientError
 
 from app.worker.infrastructure.clients.exceptions import KinesisClientException
+from app.worker.infrastructure.clients.session_manager import AWSSessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +12,9 @@ logger = logging.getLogger(__name__)
 class KinesisClient:
     def __init__(self, endpoint_url):
         self.endpoint_url = endpoint_url
+
+    def _get_async_client(self):
+        return AWSSessionManager("kinesis", endpoint_url=self.endpoint_url)
 
     async def put_record(
             self,
@@ -30,8 +32,7 @@ class KinesisClient:
         if sequence_number is not None:
             kwargs["SequenceNumberForOrdering"] = sequence_number
 
-        session = get_session()
-        async with session.create_client("kinesis", endpoint_url=self.endpoint_url) as client:
+        async with self._get_async_client() as client:
             try:
                 response = await client.put_record(**kwargs)
             except ClientError as ex:
@@ -43,4 +44,5 @@ class KinesisClient:
                 )
                 raise KinesisClientException from ex
 
+        logger.debug(f"put record SUCCESS: {data}: {partition_key}: {sequence_number}")
         return response["SequenceNumber"]

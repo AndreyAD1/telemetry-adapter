@@ -5,7 +5,6 @@ import logging
 import traceback
 from typing import Mapping, Any, Iterable
 
-from aiobotocore.session import get_session
 import boto3
 import botocore.exceptions
 
@@ -13,6 +12,7 @@ from app.worker.infrastructure.clients.interfaces import QueueClient
 from app.worker.infrastructure.clients.exceptions import (
     QueueClientReceivingException, QueueClientUnexpectedMessage
 )
+from app.worker.infrastructure.clients.session_manager import AWSSessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ class SQSClient(QueueClient):
         self.visibility_timeout = visibility_timeout
         self.wait_time = wait_time
 
+    def _get_async_client(self):
+        return AWSSessionManager("sqs", endpoint_url=self.endpoint_url)
+
     def get_messages(self) -> Iterable[Mapping[str, Any]]:
         logger.debug(f"get messages from {self.queue_url}")
         try:
@@ -52,8 +55,7 @@ class SQSClient(QueueClient):
 
     async def delete_message(self, receipt_handle: str):
         logger.debug(f"delete the message {receipt_handle}")
-        session = get_session()
-        async with session.create_client("sqs", endpoint_url=self.endpoint_url) as client:
+        async with self._get_async_client() as client:
             try:
                 await client.delete_message(
                     QueueUrl=self.queue_url,
