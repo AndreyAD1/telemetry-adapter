@@ -28,7 +28,6 @@ async def lifespan(application: FastAPI):
     if settings.debug:
         logging.getLogger("app").setLevel(logging.DEBUG)
 
-    # TODO a context manager
     sqs_client = SQSClient(
         settings.queue_url,
         settings.endpoint_url,

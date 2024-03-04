@@ -102,8 +102,8 @@ class KinesisStreamer(EventStreamer):
                 )
                 events.append(event)
 
-            is_success = True
-            for event in events:
+            is_success = False
+            for i, event in enumerate(events):
                 json_event = event.model_dump_json()
                 try:
                     async with conn.transaction():
@@ -120,13 +120,16 @@ class KinesisStreamer(EventStreamer):
                             )
                         except KinesisClientException:
                             await conn.rollback()
-                            is_success = False
                             break
 
+                        # if the last event is delivered, we want to delete
+                        #  the message from SQS even when DB commit fails
+                        if i == len(events) - 1:
+                            is_success = True
                         delivered_events_number += 1
                         logger.debug(f"receive a sequence number {sequence_number} for {json_event}")
-                except psycopg.OperationalError:
-                    logger.warning(f"DB error while sending the event: {event}")
+                except psycopg.OperationalError as ex:
+                    logger.warning(f"DB error while sending the event {event}: {ex}")
                     break
 
             await conn.execute(
