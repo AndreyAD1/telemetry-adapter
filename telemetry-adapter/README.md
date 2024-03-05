@@ -120,6 +120,7 @@ Pre-build stage:
 - unit tests.
 - "grey-box" tests that check database interactions.
 Component tests:
+- configuration tests.
 - component tests verifying conversions from SQS responses to event messages.
 - component integration tests, checking contracts between a device, an adapter, and consumers.
 Testing environment that mimics a production environment:

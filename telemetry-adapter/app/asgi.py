@@ -4,7 +4,6 @@ import logging.config
 from contextlib import asynccontextmanager
 
 import psycopg
-import psycopg_pool
 from fastapi import FastAPI
 from psycopg_pool import AsyncConnectionPool
 
