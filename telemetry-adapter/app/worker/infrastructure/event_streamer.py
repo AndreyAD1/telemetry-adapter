@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, UTC
 import logging
 from enum import Enum
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 from uuid import uuid4
 
 import psycopg.errors
@@ -82,18 +82,15 @@ class KinesisStreamer(EventStreamer):
                 json_event = event.model_dump_json()
                 try:
                     async with conn.transaction():
-                        await conn.execute(
-                            "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s WHERE id=%s",
-                            (delivered_events_number, sequence_number, submission.submission_id)
+                        sequence_number = await self._send_event(
+                            conn,
+                            delivered_events_number,
+                            sequence_number,
+                            submission.submission_id,
+                            json_event,
+                            event.device_id
                         )
-                        try:
-                            sequence_number = await self.kinesis_client.put_record(
-                                self.stream_name,
-                                json_event.encode(),
-                                str(event.device_id),
-                                sequence_number
-                            )
-                        except KinesisClientException:
+                        if sequence_number is None:
                             await conn.rollback()
                             break
 
@@ -116,35 +113,39 @@ class KinesisStreamer(EventStreamer):
         return is_success
 
     @staticmethod
-    async def _get_current_submission_status(cur, submission_id, event_number):
+    async def _get_current_submission_status(
+        cursor,
+        submission_id,
+        event_number,
+    ) -> Tuple[int, Optional[str], Optional[bool]]:
         delivered_events_number = 0
         sequence_number = None
 
-        await cur.execute(
+        await cursor.execute(
             "SELECT * FROM submissions WHERE id = %s",
             (submission_id,)
         )
-        stored_submission = await cur.fetchone()
+        stored_submission = await cursor.fetchone()
         if stored_submission:
             logger.debug(f"query_result {stored_submission}")
             if stored_submission.status == StatusEnum.pending.value:
                 return delivered_events_number, sequence_number, False
-            if stored_submission.number_of_delivered_events == len(event_number):
+            if stored_submission.number_of_delivered_events == event_number:
                 return delivered_events_number, sequence_number, True
             delivered_events_number = stored_submission.number_of_delivered_events
             sequence_number = stored_submission.sequence_number
-            cur.execute(
+            cursor.execute(
                 "UPDATE submissions SET status='pending' "
                 "WHERE id=%s AND status='processed' AND delivered_events_number=%s",
                 (submission_id, delivered_events_number)
             )
             # another worker is processing an event
-            if cur.rowcount == 0:
+            if cursor.rowcount == 0:
                 return delivered_events_number, sequence_number, False
         else:
             # create a new pending submission
             try:
-                await cur.execute(
+                await cursor.execute(
                     "INSERT INTO submissions (id, status, number_of_delivered_events) "
                     "VALUES (%s, %s, %s)",
                     (submission_id, "pending", 0)
@@ -154,3 +155,28 @@ class KinesisStreamer(EventStreamer):
                 return delivered_events_number, sequence_number, False
 
         return delivered_events_number, sequence_number, None
+
+    async def _send_event(
+        self,
+        connection,
+        delivered_events_number,
+        sequence_number,
+        submission_id,
+        json_event,
+        device_id
+    ) -> Optional[str]:
+        await connection.execute(
+            "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s WHERE id=%s",
+            (delivered_events_number, sequence_number, submission_id)
+        )
+        try:
+            sequence_number = await self.kinesis_client.put_record(
+                self.stream_name,
+                json_event.encode(),
+                str(device_id),
+                sequence_number
+            )
+        except KinesisClientException:
+            return None
+
+        return sequence_number
