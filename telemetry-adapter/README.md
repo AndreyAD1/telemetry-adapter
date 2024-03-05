@@ -18,9 +18,25 @@ Using this service with a Kinesis stream helps mitigate these risks.
 3. Convert submissions into a set of events.
 4. Route events to a Kinesis stream.
 5. Clear an SQS queue from delivered and invalid messages. 
-6. TODO: Ensure an event order.
-7. TODO: Ensure the absence of duplicate events.
+6. Ensure an event order.
+7. Ensure the absence of duplicate events.
 8. Ensure no data loss.
+
+## Design
+The application consists of two parts: an HTTP server and a worker processing
+SQS messages. 
+
+Currently, an HTTP server provides only a healthcheck endpoint
+based on a worker status.
+
+The worker polls an SQS queue, parses, and validates messages. Afterwards,
+the worker asynchronously processes all received messages. The worker stores the state
+of every submission in a PostgreSQL database so that a Kinesis and/or network
+outage will have a minimal impact on an event order and an event number (see image). 
+Additionally, the state storage helps avoid duplicates in case two workers receive 
+the same submission simultaneously.
+
+![telemetry-adapter.png](telemetry-adapter.png)
 
 ## Getting Started
 1. Install [Docker](https://docs.docker.com/get-docker/).
