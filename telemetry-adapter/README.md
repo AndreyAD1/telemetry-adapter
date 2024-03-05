@@ -78,7 +78,11 @@ TODO: There are no tests in the project yet.
    "event_type":"network_connection",
    "device_id":"154ef306-c788-4934-9489-118173e4ea1a",
    "processing_timestamp":"2024-03-05T01:49:51.260080Z",
-   "event_details": {<a structure containing event attributes>}
+   "event_details": {
+      "source_ip":"192.168.0.1",
+      "destination_ip":"142.250.74.110",
+      "destination_port":23680
+   }
 }
 ```
 
@@ -98,8 +102,27 @@ This application needs speed and does not require much consistency.
 So, NoSQL databases are likely to fit this application better.
 
 #### What kind of metrics you would collect from the application to get visibility to its througput, performance and health?
-1. Latency of processing one SQS message batch.
+1. Latency of processing an SQS message batch.
 2. Requests per second to SQS and Kinesis.
 3. Difference between received and deleted SQS messages.
 4. An SQS queue size.
 5. Number of open and used database connections.
+6. Response time of database queries.
+7. CPU and memory usage.
+
+#### How would you deploy your application in a real world scenario?
+Kubernetes autoscaling workloads or an AWS autoscaling group in a private subnet.
+Connections with an elastic database cluster.
+
+#### What kind of testing, deployment stages or quality gates you would build to ensure a safe production deployment?
+Pre-build stage:
+- static analysis, type checkers.
+- unit tests.
+- "grey-box" tests that check database interactions.
+Component tests:
+- component tests verifying conversions from SQS responses to event messages.
+- component integration tests, checking contracts between a device, an adapter, and consumers.
+Testing environment that mimics a production environment:
+- system functional tests from test devices to telemetry consumers.
+- performance tests, checking the expected payload.
+- security tests.
