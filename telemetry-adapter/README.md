@@ -23,6 +23,7 @@ Using this service with a Kinesis stream helps mitigate these risks.
 8. Ensure no data loss.
 
 ## Design
+### Description
 The application consists of two parts: an HTTP server and a worker processing
 SQS messages. 
 
@@ -69,3 +70,36 @@ the updated code.
 
 ### Tests
 TODO: There are no tests in the project yet.
+
+## Outgoing event data format example
+```json
+{
+   "id":"169a9a74-cd8f-446a-9803-d2786e01b2c6",
+   "event_type":"network_connection",
+   "device_id":"154ef306-c788-4934-9489-118173e4ea1a",
+   "processing_timestamp":"2024-03-05T01:49:51.260080Z",
+   "event_details": {<a structure containing event attributes>}
+}
+```
+
+## Design questions and answers
+#### How does your application scale and guarantee near-realtime processing when the incoming traffic increases?
+
+Upscale option:
+1. Increasing the number of messages received from SQS in one request (`MAX_MESSAGE_NUMBER_BY_REQUEST`).
+2. Increasing connection pool size (`MIN_POOL_SIZE` and `MAX_POOL_SIZE`). 
+[Read more](https://www.psycopg.org/psycopg3/docs/advanced/pool.html#what-s-the-right-size-for-the-pool).
+3. Deploying several application instances.
+
+#### Where are the possible bottlenecks and how to tackle those?
+The main bottleneck seems to be the effective number of open database connections 
+and/or database interactions. 
+This application needs speed and does not require much consistency. 
+So, NoSQL databases are likely to fit this application better.
+
+#### What kind of metrics you would collect from the application to get visibility to its througput, performance and health?
+1. Latency of processing one SQS message batch.
+2. Requests per second to SQS and Kinesis.
+3. Difference between received and deleted SQS messages.
+4. An SQS queue size.
+5. Number of open and used database connections.

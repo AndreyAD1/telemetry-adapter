@@ -35,9 +35,11 @@ async def lifespan(application: FastAPI):
         settings.message_wait_time
     )
     async with AsyncConnectionPool(
-            conninfo=settings.db_url,
-            check=AsyncConnectionPool.check_connection,
-            timeout=15
+        conninfo=settings.db_url,
+        min_size=settings.min_pool_size,
+        max_size=settings.max_pool_size,
+        check=AsyncConnectionPool.check_connection,
+        timeout=15
     ) as pg_pool:
         try:
             async with pg_pool.connection() as conn:
