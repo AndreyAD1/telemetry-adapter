@@ -97,7 +97,8 @@ class KinesisStreamer(EventStreamer):
                             await conn.rollback()
                             break
 
-                        # if the last event is delivered, we want to delete
+                        # can not make it in "for ... else ..." because
+                        # if the last event was delivered, we want to delete
                         #  the message from SQS even when DB commit fails
                         if i == len(events) - 1:
                             is_success = True
