@@ -12,16 +12,6 @@ so multiple consumers might receive the same submission).
 
 Using this service with a Kinesis stream helps mitigate these risks.
 
-## Project Goals
-1. Receive device submissions.
-2. Parse and validate submissions.
-3. Convert submissions into a set of events.
-4. Route events to a Kinesis stream.
-5. Clear an SQS queue from delivered and invalid messages. 
-6. Ensure an event order.
-7. Ensure the absence of duplicate events.
-8. Ensure no data loss.
-
 ## Design
 ### Description
 The application consists of two parts: an HTTP server and a worker processing
@@ -64,7 +54,7 @@ Follow these steps to run a testing environment.
     docker compose up --build
     ```
    This command will run device emulators (`sensor-fleet`), an SQS queue,
-   a Kinesis stream (`localstack`), and this service.
+   a Kinesis stream (`localstack`), this service, and its database.
 3. When you update a service code, the application will immediately restart with
 the updated code.
 
@@ -112,18 +102,20 @@ So, NoSQL databases are likely to fit this application better.
 
 #### How would you deploy your application in a real world scenario?
 Kubernetes autoscaling workloads or an AWS autoscaling group in a private subnet.
-Connections with an elastic database cluster.
+Connections with a scalable database cluster.
 
 #### What kind of testing, deployment stages or quality gates you would build to ensure a safe production deployment?
 Pre-build stage:
-- static analysis, type checkers.
-- unit tests.
+- static analysis, type checkers;
+- unit tests;
 - "grey-box" tests that check database interactions.
+
 Component tests:
-- configuration tests.
-- component tests verifying conversions from SQS responses to event messages.
+- configuration tests;
+- component tests verifying conversions from SQS responses to event messages;
 - component integration tests, checking contracts between a device, an adapter, and consumers.
+
 Testing environment that mimics a production environment:
-- system functional tests from test devices to telemetry consumers.
-- performance tests, checking the expected payload.
+- system functional tests from test devices to telemetry consumers;
+- performance tests, checking the expected payload;
 - security tests.
