@@ -5,6 +5,7 @@ Revises:
 Create Date: 2024-03-04 22:06:34.966512
 
 """
+from datetime import UTC, datetime
 from typing import Sequence, Union
 
 from alembic import op
@@ -29,7 +30,10 @@ def upgrade() -> None:
             nullable=False
         ),
         sa.Column("number_of_delivered_events", sa.Integer, nullable=False, default=0),
-        sa.Column("sequence_number", sa.Text, nullable=True)
+        sa.Column("sequence_number", sa.Text, nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
 
 

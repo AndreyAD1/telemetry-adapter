@@ -41,6 +41,9 @@ class StoredSubmission(BaseModel):
     status: StatusEnum
     number_of_delivered_events: NonNegativeInt
     sequence_number: Optional[str]
+    created_at: AwareDatetime
+    updated_at: Optional[AwareDatetime]
+    deleted_at: Optional[AwareDatetime]
 
 
 class KinesisStreamer(EventStreamer):
@@ -106,8 +109,13 @@ class KinesisStreamer(EventStreamer):
 
             await conn.execute(
                 "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s, "
-                "status='processed' WHERE id=%s",
-                (delivered_events_number, sequence_number, submission.submission_id,)
+                "status='processed', updated_at=%s WHERE id=%s",
+                (
+                    delivered_events_number,
+                    sequence_number,
+                    datetime.now(UTC),
+                    submission.submission_id
+                )
             )
 
         return is_success
@@ -135,9 +143,9 @@ class KinesisStreamer(EventStreamer):
             delivered_events_number = stored_submission.number_of_delivered_events
             sequence_number = stored_submission.sequence_number
             cursor.execute(
-                "UPDATE submissions SET status='pending' "
+                "UPDATE submissions SET status='pending' updated_at=%s "
                 "WHERE id=%s AND status='processed' AND delivered_events_number=%s",
-                (submission_id, delivered_events_number)
+                (datetime.now(UTC), submission_id, delivered_events_number)
             )
             # another worker is processing an event
             if cursor.rowcount == 0:
@@ -146,9 +154,9 @@ class KinesisStreamer(EventStreamer):
             # create a new pending submission
             try:
                 await cursor.execute(
-                    "INSERT INTO submissions (id, status, number_of_delivered_events) "
-                    "VALUES (%s, %s, %s)",
-                    (submission_id, "pending", 0)
+                    "INSERT INTO submissions (id, status, number_of_delivered_events, created_at) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (submission_id, "pending", 0, datetime.now(UTC))
                 )
             except psycopg.errors.UniqueViolation:
                 logger.debug(f"the other worker is processing the submission {submission_id}")
@@ -166,8 +174,9 @@ class KinesisStreamer(EventStreamer):
         device_id
     ) -> Optional[str]:
         await connection.execute(
-            "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s WHERE id=%s",
-            (delivered_events_number, sequence_number, submission_id)
+            "UPDATE submissions SET number_of_delivered_events=%s, sequence_number=%s, "
+            "updated_at=%s WHERE id=%s",
+            (delivered_events_number, sequence_number, datetime.now(UTC), submission_id)
         )
         try:
             sequence_number = await self.kinesis_client.put_record(
